@@ -23,7 +23,7 @@ The code in this repository creates the infrastructure for an API service using 
 `ecs-2.yml` updates the infrastructure to use HTTPS and the sub-domain.  
 Further instructions demonstrate pushing this application to AWS ECR and deploying to AWS.  
 
-Have your VPC ID handy along with two subnet ID's and run the below snippet replacing the four variables:
+Have your VPC ID handy along with two subnet ID's and run the below snippet replacing the four variables: 
 - YOUR_VPC_ID
 - YOUR_SUBNET_1_ID
 - YOUR_SUBNET_2_ID
