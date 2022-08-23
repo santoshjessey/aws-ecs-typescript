@@ -1,66 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-/* */Parameters:
-  Subnet1ID:
-    Type: String
-  Subnet2ID:
-    Type: String
-  VPCID:
-    Type: String
-  DomainName:
-    Type: String
-Resources:
-  ACMCertificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties: 
-      DomainName: !Sub "api.${DomainName}"
-      DomainValidationOptions:
-        - DomainName: !Sub "api.${DomainName}"
-          ValidationDomain: !Sub "api.${DomainName}"
-      ValidationMethod: DNS
-  AutoScalingRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
-  AutoScalingTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Properties:
-      MinCapacity: 1
-      MaxCapacity: 2
-      ResourceId: service/aws-ecs-typescript-api/aws-ecs-typescript-svc
-      ScalableDimension: ecs:service:DesiredCount
-      ServiceNamespace: ecs
-      RoleARN: !GetAtt AutoScalingRole.Arn
-  ApiScalingPolicyCPU:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: aws-ecs-typescript-api-svc-cpu
-      PolicyType: TargetTrackingScaling
-      ScalingTargetId: !Ref AutoScalingTarget
-      TargetTrackingScalingPolicyConfiguration:
-        PredefinedMetricSpecification:
-          PredefinedMetricType: ECSServiceAverageCPUUtilization
-        ScaleInCooldown: 10
-        ScaleOutCooldown: 10
-        TargetValue: 45.0
-  ApiScalingPolicyMemory:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: aws-ecs-typescript-api-svc-memory
-      PolicyType: TargetTrackingScaling
-      ScalingTargetId: !Ref AutoScalingTarget
-      TargetTrackingScalingPolicyConfiguration:
-        PredefinedMetricSpecification:
-          PredefinedMetricType: ECSServiceAverageMemoryUtilization 
-        ScaleInCooldown: 10
-        ScaleOutCooldown: 10
-        TargetValue: 50.0  /* */
+
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
@@ -105,8 +44,8 @@ Resources:
       GroupDescription: Security group for container
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
+          FromPort: 3000
+          ToPort: 3000
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 443
@@ -127,7 +66,7 @@ Resources:
           # REPLACE WITH YOUR ACCOUNT NUMBER AND REGION
           # Image: YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.YOUR_AWS_REGION.amazonaws.com/aws-ecs-typescript-api
           PortMappings:
-            - ContainerPort: 8080
+            - ContainerPort: 3000
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -155,7 +94,7 @@ Resources:
             - !GetAtt ContainerSecurityGroup.GroupId
       LoadBalancers:
         - TargetGroupArn: !Ref TargetGroup
-          ContainerPort: 8080
+          ContainerPort: 3000
           ContainerName: aws-ecs-typescript-container
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -197,19 +136,7 @@ Resources:
      Port: 80
      Protocol: "HTTP"
 
-  HTTPSLoadBalancerListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn: LoadBalancer
-    Properties:
-      LoadBalancerArn: !Ref LoadBalancer
-      Port: 443
-      Protocol: HTTPS
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref TargetGroup
-      SslPolicy: "ELBSecurityPolicy-2016-08"
-      Certificates: 
-      - CertificateArn: !Ref ACMCertificate
+  
   
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -217,21 +144,11 @@ Resources:
     Properties:
       TargetType: ip
       Name: aws-ecs-typescript-tg
-      Port: 8080
+      Port: 3000
       Protocol: HTTP
       VpcId: !Ref VPCID
   
-  ApiDomain:
-    Type: AWS::Route53::RecordSet
-    DependsOn: LoadBalancer
-    Properties:
-      HostedZoneName: !Sub "${DomainName}."
-      Name: !Sub "api.${DomainName}"
-      Type: CNAME
-      TTL: 60
-      ResourceRecords:
-        - !GetAtt LoadBalancer.DNSName
-
+  
 # aws cloudformation update-stack --stack-name aws-ecs-typescript-api --template-body file://./ecs-2.yml --capabilities CAPABILITY_NAMED_IAM \
 # --parameters ParameterKey=VPCID,ParameterValue=YOUR_VPC_ID \
 # ParameterKey=Subnet1ID,ParameterValue=YOUR_SUBNET_1_ID \
