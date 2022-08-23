@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Parameters:
+/* */Parameters:
   Subnet1ID:
     Type: String
   Subnet2ID:
@@ -60,7 +60,7 @@ Resources:
           PredefinedMetricType: ECSServiceAverageMemoryUtilization 
         ScaleInCooldown: 10
         ScaleOutCooldown: 10
-        TargetValue: 50.0
+        TargetValue: 50.0  /* */
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
