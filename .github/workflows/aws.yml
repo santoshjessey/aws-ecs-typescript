@@ -49,27 +49,11 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Read secrets from AWS Secrets Manager into environment variables
-        uses: say8425/aws-secrets-manager-actions@v1
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-        with:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-2
-          SECRET_NAME: talentize/app
-          OUTPUT_PATH: '.env'
-
-      - name: Translate ENV variables
-        run: |
-          printenv
-
       - name: Build & tag docker image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: aws-ecs-typescript-api
-          IMAGE_TAG: aws-ecs-typescript-api-${{ github.sha }}
+          IMAGE_TAG: ${{ github.sha }}
 
         run: |
           # Build a docker container and
@@ -79,25 +63,15 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-      - name: Push image to Amazon ECR
-        id: push-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: aws-ecs-typescript-api
-          IMAGE_TAG: aws-ecs-typescript-api-${{ github.sha }}
-        run: |
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
       - name: Download task definition
-        run: aws ecs describe-task-definition --task-definition aws-ecs-typescript-task --query taskDefinition > task-definition.json
+        run: aws ecs describe-task-definition --task-definition test-task --query taskDefinition > task-definition.json
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: update-task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
-          container-name: aws-ecs-typescript-container
+          container-name: test-container
           image: ${{ steps.push-image.outputs.image }}
 
       - name: Deploy Amazon ECS task definition
@@ -105,5 +79,5 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.update-task-def.outputs.task-definition }}
-          service: aws-ecs-typescript-service
-          cluster: aws-ecs-typescript-api
+          service: test-container-service
+          cluster: test-cluster
